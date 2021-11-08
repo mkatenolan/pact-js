@@ -21,6 +21,7 @@ export class GraphQLInteraction extends Interaction {
   protected operation?: string | null = undefined
   protected variables?: GraphQLVariables = undefined
   protected query: string
+  protected method: string
 
   /**
    * The type of GraphQL operation. Generally not required.
@@ -92,25 +93,44 @@ export class GraphQLInteraction extends Interaction {
         "You must provide a description for the query."
       )
     }
+    if (this.method === "POST") {
+      this.state.request = extend(
+        {
+          body: omitBy(
+            {
+              operationName: this.operation,
+              query: regex({
+                generate: this.query,
+                matcher: escapeGraphQlQuery(this.query),
+              }),
+              variables: this.variables,
+            },
+            isUndefined
+          ),
+          headers: { "content-type": "application/json" },
+          method: this.method,
+        },
+        this.state.request
+      )
+    }
 
-    this.state.request = extend(
-      {
-        body: omitBy(
-          {
-            operationName: this.operation,
-            query: regex({
-              generate: this.query,
-              matcher: escapeGraphQlQuery(this.query),
-            }),
-            variables: this.variables,
-          },
-          isUndefined
-        ),
-        headers: { "content-type": "application/json" },
-        method: "POST",
-      },
-      this.state.request
-    )
+    if (this.method === "GET") {
+      this.state.request = extend(
+        {
+          body: omitBy(
+            {
+              operationName: this.operation,
+              variables: this.variables,
+            },
+            isUndefined
+          ),
+          headers: { "content-type": "application/json" },
+          method: this.method,
+          query: this.query,
+        },
+        this.state.request
+      )
+    }
 
     return this.state
   }
